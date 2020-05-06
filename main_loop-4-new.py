@@ -519,31 +519,15 @@ def copy_to_wait_upload(email_attach_path, wait_upload_dir):
             upload_file_path = email_attach_data.split("@")[1]  # 获取【数据处理结果文件路径】，解析文件内容，@符后为数据处理结果文件路径
             upload_file_name = upload_file_path.split("\\")[4]  # 获取【数据处理结果文件名】，解析数据处理结果文件路径，'\\'符后第四位为文件名
 
-            # if upload_file_name.split('-')[3] == '01.txt':
-            #     new_upload_file_name = upload_file_name.split('-')[0] + '-' + upload_file_name.split('-')[
-            #         1] + "-1-03.txt"
-            # else:
-            #     new_upload_file_name = upload_file_name.split('-')[0] + '-' + upload_file_name.split('-')[
-            #         1] + "-1-04.txt"
-
             # 获取当前时间：年月日-时分秒 字符串
             now_time = time.strftime("%Y%m%d-%H%M%S", time.localtime())
 
             # 拼接目标地址文件全路径，即
             new_upload_file_path = wait_upload_dir + '\\' + now_time + upload_file_name
 
-            # new_email_attach_data = email_attach_data.split("@")[0] + '@' + new_upload_file_path
-
-        # print(upload_file_path)
-        # if os.path.exists(upload_file_path):
-        #     print('存在')
-
         # 将本次生成的数据处理汇总结果复制到待上传文件夹
         shutil.copy(upload_file_path, new_upload_file_path)
 
-
-        # with open(new_email_attach_path, "w", encoding='UTF-8') as email_attach:
-        #     email_attach.write(new_email_attach_data)
     except Exception as e:
         print('数据处理结果文本处理异常：')
         logging.info('数据处理结果文本处理异常：')
@@ -602,7 +586,6 @@ def collect_wait_upload_to_up_ftp(file_num, date_between, jiqihao, wait_upload_d
     return up_ftp_file_path
 
 
-
 def reset_email_data(email_attach_path, up_ftp_file_path, wait_upload_dir):
     '''
         重置数据处理结果文件的内容
@@ -648,6 +631,20 @@ def reset_email_data(email_attach_path, up_ftp_file_path, wait_upload_dir):
         print(e)
 
 
+# 发送邮件
+def send_mail():
+    print('发送邮件')
+    logging.info('发送邮件')
+    ## bat_path1 = "D:\\RPA\\programs\\Main_Flow_Control\\bat\\email.bat"
+    ## os.system(bat_path1)
+    subprocess.call("D:/RPA/programs/RPA154/RpaExecutor/RpaExecutor.exe --file=D:/RPA/codes/rpa_code/1_email/email.rpafile",
+                    # creationflags=CREATE_NO_WINDOW,
+                    )
+    print('发送邮件完成')
+    logging.info('发送邮件完成')
+    time.sleep(2)
+
+
 # 数据处理的结果文件全路径
 email_attach_path = "D:/RPA/codes/rpa_code/1_setting/email_data.txt"
 
@@ -660,6 +657,9 @@ mkdir(wait_upload_dir)
 up_ftp_dir = 'D:/RPA/up_ftp/' + localtime + '/'
 # 创建ftp上传文件夹
 mkdir(up_ftp_dir)
+
+# ftp上传结果的反馈文件路径
+ftp_result_file_path = "D:/RPA/codes/rpa_code/1_setting/FTP_result.txt"
 
 
 # 根据不同的调用次序，执行不同的流程
@@ -676,43 +676,91 @@ if file_num == 1 or file_num == 3:
     reset_email_data(email_attach_path, up_ftp_file_path, wait_upload_dir)
 
     # 调用上传ftp
-        # 上传成功，将待上传文件备份到，wait_upload_backup/年月日-时分秒/*.txt
-        # 上传失败，重置邮件话术
+    logging.info('上传ftp')
+    upload_file_to_ftp()
+
+    # 读取ftp上传结果：
+    # ftp有重名，反馈失败，不上传，不清空
+    # 上传成功，将待上传文件备份到，wait_upload_backup/年月日-时分秒/*.txt
+    # 上传失败，重置邮件话术
+    with open(ftp_result_file_path, 'r', encoding='utf-8') as ftp_result:
+        ftp_result = ftp_result.read()
+
+
+    # 清空指定文件夹
+    def delfile(path):
+        fileNames = glob.glob(path + r'\*')
+        for fileName in fileNames:
+            try:
+                os.remove(fileName)
+            except:
+                try:
+                    os.rmdir(fileName)
+                except:
+                    delfile(fileName)
+                    os.rmdir(fileName)
+
+    def wait_upload_files_to_backup_dir(wait_upload_dir, wait_upload_backup_dir):
+        for current_path, dirs, files in os.walk(wait_upload_dir):
+            # current_path 所指的是当前正在遍历的这个文件夹的【本身的地址】
+            # dirs 是一个 list，内容是该文件夹中所有的【目录】的名字(不包括子目录)
+            # files 同样是 list, 内容是该文件夹中所有的【文件】(不包括子目录)
+            for file in files:
+                current_file_path = os.path.join(current_path, file)
+                shutil.copy(current_file_path, wait_upload_backup_dir)
+                print(current_file_path)
+
+
+
+    if ftp_result == '传输成功':
+        logging.info('上传成功，反馈【传输成功】,将待上传文件夹内所有txt文件备份，并清空待上传文件夹')
+
+        # 获取当前时间：年月日-时分秒 字符串
+        now_time = time.strftime("%Y%m%d-%H%M%S", time.localtime())
+
+        # 设置【待上传备份文件夹】路径
+        wait_upload_backup_dir = 'D:/RPA/wait_upload_backup/' + str(now_time) + '/'
+        # 创建待上传备份文件夹
+        mkdir(wait_upload_backup_dir)
+
+        # 将待上传文件夹内所有txt文件备份，并清空待上传文件夹
+        wait_upload_files_to_backup_dir(wait_upload_dir, wait_upload_backup_dir)
+        delfile(wait_upload_dir)
+
+    elif ftp_result == '传输失败':
+        logging.info('上传失败，反馈【传输失败】，不清空待上传文件夹')
+        pass
+    elif ftp_result == '已存在':
+        logging.info('ftp上有重名文件，反馈【已存在】，不上传ftp，不清空待上传文件夹')
+
+
+
 
     # 调用发送邮件
+    send_mail()
 
-    pass
+
 elif file_num == 2:
     # 将数据处理生成的txt文件，复制到待上传文件夹，wait_upload
+    copy_to_wait_upload(email_attach_path, wait_upload_dir)
     # 调用发送邮件
-    pass
+    send_mail()
+
+
 elif file_num == 4:
     # 不需要将数据处理结果复制到待上传
     # 调用发送邮件
-    pass
+    send_mail()
 
 
 
-# 发送邮件
-def send_mail():
-    print('发送邮件')
-    logging.info('发送邮件')
-    ## bat_path1 = "D:\\RPA\\programs\\Main_Flow_Control\\bat\\email.bat"
-    ## os.system(bat_path1)
-    subprocess.call("D:/RPA/programs/RPA154/RpaExecutor/RpaExecutor.exe --file=D:/RPA/codes/rpa_code/1_email/email.rpafile",
-                    # creationflags=CREATE_NO_WINDOW,
-                    )
-    print('发送邮件完成')
-    logging.info('发送邮件完成')
-    time.sleep(2)
 
-
-# 上传ftp
-logging.info('上传ftp')
-CREATE_NO_WINDOW = 0x08000000
-subprocess.Popen("python D:/RPA/programs/Main_Flow_Control/ftp_transf_file.py",
-                 creationflags=CREATE_NO_WINDOW,
-                 )
+# # 上传ftp
+# logging.info('上传ftp')
+# CREATE_NO_WINDOW = 0x08000000
+# subprocess.Popen("python D:/RPA/programs/Main_Flow_Control/ftp_transf_file.py",
+#                  creationflags=CREATE_NO_WINDOW,
+#                  )
 
 
 
@@ -741,12 +789,7 @@ end_During_Startup()
 print("运行完成。。。")
 logging.info('运行完成\n\n')
 
-# #############保存为txt文本，上传txt到ftp##################
 
-# savetxt_path_bat = "D:/RPA/programs/Main_Flow_Control/bat/savetxt.bat"
-# os.system(savetxt_path_bat)
-
-############################################################
 '''
 time.sleep(1)
 # 结束录屏任务
