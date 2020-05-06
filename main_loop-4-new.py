@@ -297,9 +297,11 @@ start__ = 'start'
 #接收的执行次序号：file_num
 # 传参类型为自动任务
 if len(sys.argv) == 2 and (str(sys.argv[1]) == '1' or str(sys.argv[1]) == '2' or str(sys.argv[1]) == '3'):
+    # 两位参数，并且第二位参数为 1/2/3
     file_num = str(sys.argv[1])
 # 传参类型为手动任务
 elif len(sys.argv) == 1:
+    # 一位参数
     file_num = '4'
 else:
     print('启动参数类型或数量错误')
