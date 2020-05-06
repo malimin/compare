@@ -576,10 +576,10 @@ def collect_wait_upload_to_up_ftp(file_num, date_between, jiqihao, wait_upload_d
         xuhao2 = '0' + str(xuhao2)
 
     # 拼接上传文件的文件全路径
-    if str(file_num) == 1:
-        up_ftp_file_path = up_ftp_dir + my_endtime + '-1-' + str(xuhao1) + '.txt'
-    elif str(file_num) == 2:
+    if str(file_num) == 1: # 第一次上传名为 【-2】
         up_ftp_file_path = up_ftp_dir + my_endtime + '-1-' + str(xuhao2) + '.txt'
+    elif str(file_num) == 2: # 第二次上传名为 【-1】
+        up_ftp_file_path = up_ftp_dir + my_endtime + '-1-' + str(xuhao1) + '.txt'
 
     # 待上传文件夹内的所有txt文件，文件名组成的列表
     wait_upload_all_file = glob.glob(wait_upload_dir + '*.txt')
@@ -601,13 +601,13 @@ def collect_wait_upload_to_up_ftp(file_num, date_between, jiqihao, wait_upload_d
 
 
 
-def reset_email_data(email_attach_path, up_ftp_file_path, rows_num = 0):
+def reset_email_data(email_attach_path, up_ftp_file_path, wait_upload_dir):
     '''
         重置数据处理结果文件的内容
 
         1. 获取上传ftp文件的行数
 
-        2. 更改数据处理的结果文件内的 上传文件路径
+        2. 更改数据处理的结果文件内的 上传行数和上传文件路径
 
         :param email_attach_path: 数据处理结果文件的全路径，内容以 @ 为分隔符
         :param up_ftp_file_path: @ 分隔符第二位：需要更改为待上传ftp文件的全路径
@@ -615,12 +615,27 @@ def reset_email_data(email_attach_path, up_ftp_file_path, rows_num = 0):
         :return:
     '''
     try:
-        # 获取获取上传ftp文件的行数
-        rows_num = rows_num
-        if str(rows_num) == '0':
+        ######## 获取获取上传ftp文件的行数 ########
+
+        # 待上传文件夹内的所有txt文件，文件名组成的列表
+        wait_upload_all_file = glob.glob(wait_upload_dir + '*.txt')
+
+        # 只有一个待上传文件 --> 文件行数设置为原处理结果的第一个参数
+        if len(wait_upload_all_file) == 1:
+            # 获取【数据处理结果统计内容】
+            with open(email_attach_path, "r", encoding="UTF-8") as email_attach:
+                email_attach_data = email_attach.read()
+                rows_num = email_attach_data.split("@")[0]
+                # 获取【数据处理结果文件行数】，解析文件内容，@符后为数据处理结果文件路径
+
+
+        # 待上传文件夹内，无待上传文件，或，待上传文件数大于1 --> 读取真实行数
+        if  len(wait_upload_all_file) == 0 or len(wait_upload_all_file) > 1:
             with open(up_ftp_file_path, 'r', encoding='utf-8') as up_ftp_file:
                 rows_num = len(up_ftp_file.readlines())
 
+
+        ######## 更改数据处理的结果文件内的 上传行数和上传文件路径 ########
 
         # 将数据处理统计的行数和上床ftp文件的全路径，写入数据处理结果文件，内容以 @ 分隔
         with open(email_attach_path, 'w', encoding='utf-8') as email_attach:
@@ -649,14 +664,14 @@ mkdir(up_ftp_dir)
 # 待上传有重名不覆盖
 # ftp有重名，反馈失败，不上传，不清空
 if file_num == 1 or file_num == 3:
-    # 将数据处理生成的txt文件，复制到待上传文件夹，wait_upload
+    # 将数据处理生成的txt文件，复制到【待上传文件夹】，wait_upload
     copy_to_wait_upload(email_attach_path, wait_upload_dir)
 
-    # 汇总待上传文件夹内所有txt文件，根据次序和机器号生成文件名，保存到ftp文件夹，up_ftp
+    # 汇总待上传文件夹内所有txt文件，根据次序和机器号生成文件名，保存到【上传ftp】文件夹，up_ftp
     up_ftp_file_path = collect_wait_upload_to_up_ftp(file_num, date_between, jiqihao, wait_upload_dir, up_ftp_dir)
 
     # 重置数据处理结果文件，1_setting/email_data.txt
-    reset_email_data(email_attach_path, up_ftp_file_path)
+    reset_email_data(email_attach_path, up_ftp_file_path, wait_upload_dir)
 
     # 调用上传ftp
         # 上传成功，将待上传文件备份到，wait_upload_backup/年月日-时分秒/*.txt
@@ -673,8 +688,6 @@ elif file_num == 4:
     # 不需要将数据处理结果复制到待上传
     # 调用发送邮件
     pass
-
-
 
 
 
