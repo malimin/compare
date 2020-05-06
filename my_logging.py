@@ -4,7 +4,8 @@ import warnings
 import time
 import os
 
-log_path = "D:\\RPA\\programs\\Main_Flow_Control\\log\\"
+# log_path = "D:\\RPA\\programs\\Main_Flow_Control\\log\\"
+log_path = ".\\log\\"
 # print(log_path)
 if not os.path.exists(log_path):
     # print('文件夹不存在')
@@ -43,7 +44,8 @@ miao = time.strftime('%S',local_time)
 
 # warnings.filterwarnings('ignore')
 
-log_dir = 'D:\\RPA\\programs\\Main_Flow_Control\\log\\'+nian+yue+ri+'-record.txt'
+# log_dir = 'D:\\RPA\\programs\\Main_Flow_Control\\log\\'+nian+yue+ri+'-record.txt'
+log_dir = '.\\log\\'+nian+yue+ri+'-record.txt'
 def get_logger():
     fh = logging.FileHandler(log_dir,encoding='utf-8',mode="a") #创建一个文件流并设置编码utf8
     logger = logging.getLogger() #获得一个logger对象，默认是root
