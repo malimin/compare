@@ -15,6 +15,8 @@ import sys
 import shutil
 import datetime
 import glob
+from ftp_transf_file_4_new import *
+
 """
 	任务命令文件：			D:/RPA/basic_data/all_data/当前待执行信息.txt
 	网盾银行基础信息表：		D:/RPA/basic_data/all_data/网盾银行基础信息表.xlsx
